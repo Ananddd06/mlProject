@@ -1,0 +1,59 @@
+name: Student Performance ML Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Data Ingestion
+      run: |
+        python src/components/data_ingestion.py
+      
+    - name: Data Transformation
+      run: |
+        python src/components/data_transformation.py
+
+    - name: Model Training
+      run: |
+        python src/components/model_trainer.py
+
+    - name: Store Model Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-artifacts
+        path: |
+          artifacts/
+          catboost_info/
+        retention-days: 5
+
+    - name: Run Pipeline
+      run: |
+        python app.py
+
+    - name: Run Tests
+      run: |
+        python -m pytest
+
+    - name: Check Logs
+      run: |
+        if [ -f logs/logs.log ]; then
+          tail -n 50 logs/logs.log
+        fi
